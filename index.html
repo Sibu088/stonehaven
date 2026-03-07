@@ -134,7 +134,7 @@
   .cat-icon { font-size:1.2rem; }
 
   /* CONTENT */
-  .content { flex:1; padding:40px; max-width:900px; }
+  .content { flex:1; padding:32px 40px; max-width:960px; overflow-y:auto; height:calc(100vh - 64px); }
   .section-header { margin-bottom:32px; }
   .section-title { font-family:'Cormorant Garamond',serif; font-size:2.5rem; font-weight:300; }
   .section-desc { color:var(--muted); font-size:0.85rem; margin-top:6px; }
@@ -349,11 +349,32 @@
 
   @media(max-width:768px) {
     .sidebar { display:none; }
+    .mobile-tabs { display:block; }
     #cart-panel { width:100%; }
-    .content { padding:20px; }
+    .content { padding:16px; height:auto; overflow-y:visible; }
     .kitchen-grid { grid-template-columns:1fr; }
+    .menu-grid { grid-template-columns:1fr 1fr; gap:12px; }
+  }
+  @media(max-width:500px) {
     .menu-grid { grid-template-columns:1fr; }
   }
+
+  /* Mobile tab bar */
+  .mobile-tabs {
+    display:none; overflow-x:auto; white-space:nowrap;
+    background:var(--dark2); border-bottom:1px solid var(--border);
+    position:sticky; top:64px; z-index:80;
+    -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  }
+  .mobile-tabs::-webkit-scrollbar { display:none; }
+  .mobile-tab {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:14px 16px; background:none; border:none;
+    border-bottom:3px solid transparent;
+    color:var(--muted); font-family:'DM Sans',sans-serif; font-size:0.8rem;
+    cursor:pointer; transition:all 0.2s; white-space:nowrap;
+  }
+  .mobile-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
 </style>
 </head>
 <body>
@@ -397,23 +418,24 @@
     </div>
   </div>
 
+  <div class="mobile-tabs" id="mobileTabs"></div>
   <div class="main">
     <div class="sidebar">
       <div class="sidebar-label">Menu</div>
-      <button class="cat-btn active" onclick="scrollTo('starters')"><span class="cat-icon">🥗</span> Starters</button>
-      <button class="cat-btn" onclick="scrollTo('mains')"><span class="cat-icon">🍖</span> Main Course</button>
-      <button class="cat-btn" onclick="scrollTo('seafood')"><span class="cat-icon">🦞</span> Seafood</button>
-      <button class="cat-btn" onclick="scrollTo('grills')"><span class="cat-icon">🥩</span> Grills</button>
-      <button class="cat-btn" onclick="scrollTo('pasta')"><span class="cat-icon">🍝</span> Pasta</button>
-      <button class="cat-btn" onclick="scrollTo('burgers')"><span class="cat-icon">🍔</span> Burgers</button>
-      <button class="cat-btn" onclick="scrollTo('sides')"><span class="cat-icon">🥔</span> Sides</button>
-      <button class="cat-btn" onclick="scrollTo('desserts')"><span class="cat-icon">🍰</span> Desserts</button>
+      <button class="cat-btn active" onclick="showCategory('starters', this)"><span class="cat-icon">🥗</span> Starters</button>
+      <button class="cat-btn" onclick="showCategory('mains', this)"><span class="cat-icon">🍖</span> Main Course</button>
+      <button class="cat-btn" onclick="showCategory('seafood', this)"><span class="cat-icon">🦞</span> Seafood</button>
+      <button class="cat-btn" onclick="showCategory('grills', this)"><span class="cat-icon">🥩</span> Grills</button>
+      <button class="cat-btn" onclick="showCategory('pasta', this)"><span class="cat-icon">🍝</span> Pasta</button>
+      <button class="cat-btn" onclick="showCategory('burgers', this)"><span class="cat-icon">🍔</span> Burgers</button>
+      <button class="cat-btn" onclick="showCategory('sides', this)"><span class="cat-icon">🥔</span> Sides</button>
+      <button class="cat-btn" onclick="showCategory('desserts', this)"><span class="cat-icon">🍰</span> Desserts</button>
       <div class="sidebar-label" style="margin-top:20px">Drinks</div>
-      <button class="cat-btn" onclick="scrollTo('cocktails')"><span class="cat-icon">🍹</span> Cocktails</button>
-      <button class="cat-btn" onclick="scrollTo('wine')"><span class="cat-icon">🍷</span> Wine</button>
-      <button class="cat-btn" onclick="scrollTo('spirits')"><span class="cat-icon">🥃</span> Spirits</button>
-      <button class="cat-btn" onclick="scrollTo('beers')"><span class="cat-icon">🍺</span> Beers</button>
-      <button class="cat-btn" onclick="scrollTo('softdrinks')"><span class="cat-icon">🥤</span> Soft Drinks</button>
+      <button class="cat-btn" onclick="showCategory('cocktails', this)"><span class="cat-icon">🍹</span> Cocktails</button>
+      <button class="cat-btn" onclick="showCategory('wine', this)"><span class="cat-icon">🍷</span> Wine</button>
+      <button class="cat-btn" onclick="showCategory('spirits', this)"><span class="cat-icon">🥃</span> Spirits</button>
+      <button class="cat-btn" onclick="showCategory('beers', this)"><span class="cat-icon">🍺</span> Beers</button>
+      <button class="cat-btn" onclick="showCategory('softdrinks', this)"><span class="cat-icon">🥤</span> Soft Drinks</button>
     </div>
 
     <div class="content" id="menuContent"></div>
@@ -668,9 +690,11 @@ function confirmTable(){
 function buildMenu(){
   const c = document.getElementById('menuContent');
   c.innerHTML='';
+  let isFirst = true;
   Object.entries(MENU).forEach(([key,cat])=>{
     const sec = document.createElement('div');
     sec.className='cat-section'; sec.id=key;
+    sec.style.display = isFirst ? 'block' : 'none';
     sec.innerHTML=`<div class="cat-section-title">${cat.icon} ${cat.label}</div><div class="menu-grid">${
       cat.items.map(item=>`
         <div class="menu-card" onclick="addToCart('${key}','${item.name}',${item.price},'${item.img}')">
@@ -686,13 +710,40 @@ function buildMenu(){
         </div>`).join('')
     }</div>`;
     c.appendChild(sec);
+    isFirst = false;
   });
+  // Build mobile tab bar
+  const mtEl = document.getElementById('mobileTabs');
+  if(mtEl){
+    mtEl.innerHTML = '';
+    let firstTab = true;
+    Object.entries(MENU).forEach(([key,cat])=>{
+      const tab = document.createElement('button');
+      tab.className = 'mobile-tab' + (firstTab ? ' active' : '');
+      tab.innerHTML = cat.icon + ' ' + cat.label;
+      tab.onclick = function(){
+        showCategory(key, null);
+        document.querySelectorAll('.mobile-tab').forEach(b=>b.classList.remove('active'));
+        tab.classList.add('active');
+        tab.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+      };
+      mtEl.appendChild(tab);
+      firstTab = false;
+    });
+  }
 }
 
-function scrollTo(id){
-  document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'});
+function showCategory(id, btn){
+  // Hide all sections, show only selected
+  document.querySelectorAll('.cat-section').forEach(s=>{
+    s.style.display = s.id === id ? 'block' : 'none';
+  });
+  // Update sidebar active state
   document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
-  event.target.closest('.cat-btn').classList.add('active');
+  if(btn) btn.classList.add('active');
+  // Scroll to top of page content
+  document.getElementById('menuContent').scrollTop = 0;
+  document.querySelector('.content')?.scrollTo({top:0});
 }
 
 function addToCart(cat,name,price,img){
